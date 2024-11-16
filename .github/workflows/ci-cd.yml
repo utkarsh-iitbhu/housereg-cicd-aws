@@ -62,28 +62,15 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-    # Set up SSH private key before deploying
-    - name: Set up SSH key
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    # Optional: Skip SSH setup if not needed anymore
+    # You can remove the "Set up SSH key" and "Deploy to EC2" steps
 
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.EC2_IP_ADDRESS }}
-        username: ubuntu
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          # Login to ECR
-          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-          
-          # Stop and remove existing container if it exists
-          docker ps -q --filter "name=house-predictor" | grep -q . && docker stop house-predictor && docker rm -f house-predictor
-          
-          # Pull and run the new image
-          docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
-          docker run -d --name house-predictor -p 8000:8000 ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+    # Fetch the latest image from ECR and run it (No SSH required)
+    - name: Pull and run the Docker image from ECR
+      run: |
+        # Log in to ECR to pull the image
+        aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+        
+        # Pull and run the latest image
+        docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+        docker run -d --name house-predictor -p 8000:8000 ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
