@@ -31,13 +31,6 @@ jobs:
     - name: Run tests
       run: |
         poetry run pytest tests/ --cov=housereg --cov-report=xml
-    
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        fail_ci_if_error: true
 
   build-and-deploy:
     needs: test
