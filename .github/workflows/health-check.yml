@@ -1,0 +1,22 @@
+name: Health Check
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check deployment health
+      run: |
+        sleep 30  # Wait for deployment to stabilize
+        response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_IP_ADDRESS }}:8000/health)
+        if [ $response -eq 200 ]; then
+          echo "Deployment successful and healthy!"
+        else
+          echo "Deployment health check failed!"
+          exit 1
+        fi
